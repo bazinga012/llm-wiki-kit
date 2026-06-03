@@ -86,7 +86,8 @@ case "$AGENT" in
     if [ "$DYNAMIC" -eq 1 ]; then printf '%s\n\n' "$DYN_RESOLVER"; fi
     printf '%s\n' "$RENDERED_BODY"
     ;;
-  opencode)
+  opencode|antigravity)
+    # opencode commands and Antigravity workflows: description frontmatter + body
     printf -- '---\ndescription: %s\n---\n' "$DESC"
     printf '%s\n' "$RENDERED_BODY"
     ;;
@@ -105,7 +106,7 @@ case "$AGENT" in
     printf '%s\n' "$RENDERED_BODY"
     printf '%s\n' "$TQ"
     ;;
-  cursor|antigravity)
+  cursor)
     printf '%s\n' "$RENDERED_BODY"
     ;;
 esac

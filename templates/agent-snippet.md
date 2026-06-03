@@ -1,4 +1,4 @@
-## Knowledge wiki
+## Knowledge wiki (llm-wiki-kit)
 A persistent, agent-maintained knowledge base lives at `{{WIKI}}` (Karpathy
 "LLM Wiki" pattern). It holds durable, cross-session knowledge: generic/reusable
 facts in topic folders (`wiki/<topic>/`), org/project-specific facts in their own

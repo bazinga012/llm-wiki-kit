@@ -41,14 +41,18 @@ With no `--agents`, it autodetects every agent whose config directory exists
 | Codex CLI | `prompts/*.md` | md | `$ARGUMENTS` | `AGENTS.md` | `CODEX_HOME` |
 | opencode | `command/*.md` | md + frontmatter | `$ARGUMENTS` | `AGENTS.md` | `OPENCODE_CONFIG` |
 | Cursor | `commands/*.md` | md | inline hint¹ | `rules/llm-wiki-kit.mdc`² | `CURSOR_DIR` |
-| Antigravity | `workflows/*.md` | md | inline hint¹ | `AGENTS.md`³ | `ANTIGRAVITY_DIR` |
+| Antigravity | `config/global_workflows/*.md`³ | md | inline hint¹ | shared `GEMINI.md`⁴ | `ANTIGRAVITY_DIR` |
 
 ¹ Cursor/Antigravity insert-and-edit the prompt rather than expanding an args
 token, so the command ships with an editable `<placeholder>` instead.
 ² Cursor rules are project-scoped; for a truly global rule, paste the snippet
 into Cursor → Settings → Rules (User Rules).
-³ Antigravity's global config path is still settling; override with
-`ANTIGRAVITY_DIR` if your install differs.
+³ Antigravity is a slash-command = **workflow**. User-global workflows live in
+the single shared `~/.gemini/config/global_workflows/` (used by both the
+`antigravity` and `antigravity-ide` variants). Per-project workflows/rules go in
+a repo's `.agent/workflows/` & `.agent/rules/`.
+⁴ Antigravity surfaces `~/.gemini/GEMINI.md` as a global Rule, so the kit's
+instruction snippet installs there (shared with Gemini CLI).
 
 ## Configurable wiki path
 The shared wiki directory is resolved (by `setup.sh` and by the Claude plugin's

@@ -31,7 +31,10 @@ Usage: scripts/setup.sh [--agents LIST] [--wiki-dir PATH] [--config-dir PATH] [-
   --no-git          Don't 'git init' a fresh wiki
 
 Per-agent config roots can be overridden via env vars: CLAUDE_CONFIG_DIR,
-GEMINI_DIR, CODEX_HOME, OPENCODE_CONFIG, CURSOR_DIR, ANTIGRAVITY_DIR.
+GEMINI_DIR, CODEX_HOME, OPENCODE_CONFIG, CURSOR_DIR. Antigravity shares the
+Gemini home (~/.gemini); override its base with ANTIGRAVITY_DIR. It installs
+workflows into <base>/config/global_workflows (shared by all Antigravity
+variants) and its rule into <base>/GEMINI.md.
 EOF
 }
 
@@ -58,32 +61,54 @@ WIKI_DIR="${WIKI_DIR/#\~/$HOME}"
 CONFIG_DIR="${CONFIG_DIR/#\~/$HOME}"
 
 # --- per-agent metadata ---------------------------------------------------
-# root | command-subdir | command-ext | memory-file (relative to root)
+# Antigravity (both the "antigravity" and "antigravity-ide" variants) shares the
+# Gemini home (~/.gemini). It reads user-global slash commands as "workflows"
+# from a single shared dir: ~/.gemini/config/global_workflows (markdown files,
+# `description` frontmatter + body). Global rules come from ~/.gemini/GEMINI.md.
+ANTIGRAVITY_BASE="${ANTIGRAVITY_DIR:-${GEMINI_DIR:-$HOME/.gemini}}"
+ANTIGRAVITY_CONFIG="$ANTIGRAVITY_BASE/config"
+
 agent_root() {
   case "$1" in
-    claude)      echo "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ;;
-    gemini)      echo "${GEMINI_DIR:-$HOME/.gemini}" ;;
-    codex)       echo "${CODEX_HOME:-$HOME/.codex}" ;;
-    opencode)    echo "${OPENCODE_CONFIG:-$HOME/.config/opencode}" ;;
-    cursor)      echo "${CURSOR_DIR:-$HOME/.cursor}" ;;
-    antigravity) echo "${ANTIGRAVITY_DIR:-$HOME/.antigravity}" ;;
-  esac
-}
-agent_cmddir() {
-  case "$1" in
-    codex) echo "prompts" ;;
-    opencode) echo "command" ;;
-    antigravity) echo "workflows" ;;
-    *) echo "commands" ;;
+    claude)   echo "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ;;
+    gemini)   echo "${GEMINI_DIR:-$HOME/.gemini}" ;;
+    codex)    echo "${CODEX_HOME:-$HOME/.codex}" ;;
+    opencode) echo "${OPENCODE_CONFIG:-$HOME/.config/opencode}" ;;
+    cursor)   echo "${CURSOR_DIR:-$HOME/.cursor}" ;;
   esac
 }
 agent_ext() { case "$1" in gemini) echo "toml" ;; *) echo "md" ;; esac; }
-agent_mem() {
+
+# Command target dir(s), absolute, newline-separated (an agent may have several).
+agent_cmd_targets() {
   case "$1" in
-    claude) echo "CLAUDE.md" ;;
-    gemini) echo "GEMINI.md" ;;
-    codex|opencode|antigravity) echo "AGENTS.md" ;;
-    cursor) echo "rules/llm-wiki-kit.mdc" ;;
+    claude)   echo "$(agent_root claude)/commands" ;;
+    gemini)   echo "$(agent_root gemini)/commands" ;;
+    codex)    echo "$(agent_root codex)/prompts" ;;
+    opencode) echo "$(agent_root opencode)/command" ;;
+    cursor)   echo "$(agent_root cursor)/commands" ;;
+    antigravity) echo "$ANTIGRAVITY_CONFIG/global_workflows" ;;
+  esac
+}
+
+# Instruction-snippet target file, absolute (empty => skip).
+agent_mem_file() {
+  case "$1" in
+    claude)   echo "$(agent_root claude)/CLAUDE.md" ;;
+    gemini)   echo "$(agent_root gemini)/GEMINI.md" ;;
+    codex)    echo "$(agent_root codex)/AGENTS.md" ;;
+    opencode) echo "$(agent_root opencode)/AGENTS.md" ;;
+    cursor)   echo "$(agent_root cursor)/rules/llm-wiki-kit.mdc" ;;
+    antigravity) echo "$ANTIGRAVITY_BASE/GEMINI.md" ;;  # shared Gemini home
+  esac
+}
+
+agent_present() {  # for autodetect
+  case "$1" in
+    antigravity)
+      [ -d "$ANTIGRAVITY_CONFIG" ] && return 0
+      [ -d "$ANTIGRAVITY_BASE/antigravity" ] || [ -d "$ANTIGRAVITY_BASE/antigravity-ide" ] ;;
+    *) [ -d "$(agent_root "$1")" ] ;;
   esac
 }
 
@@ -97,7 +122,7 @@ if [ -n "$AGENTS_ARG" ]; then
   fi
 else
   for a in $ALL_AGENTS; do
-    [ -d "$(agent_root "$a")" ] && selected="$selected $a"
+    agent_present "$a" && selected="$selected $a"
   done
   [ -n "${selected// /}" ] || selected="claude"   # fallback
 fi
@@ -109,27 +134,45 @@ echo "==> agents:   $(echo $selected)"
 # --- snippet with the wiki path baked in ---------------------------------
 SNIPPET_BAKED="$(sed "s|{{WIKI}}|$(printf '%s' "$WIKI_DIR" | sed 's/[&|\]/\\&/g')|g" \
                   "$KIT_DIR/templates/agent-snippet.md")"
-MARKER_BEGIN="<!-- llm-wiki-kit:begin -->"
-MARKER_END="<!-- llm-wiki-kit:end -->"
+# The managed block leads with a readable heading (some agents — e.g. Antigravity
+# — surface a memory file's first line as a rule title, so we don't want a raw
+# marker comment there) and is closed by a trailing HTML comment we can find on
+# re-runs. We also strip the old begin/end-marker form for clean migration.
+MEM_END="<!-- /llm-wiki-kit -->"
+
+strip_managed() {  # remove any existing llm-wiki-kit block from $1, trim trailing blanks
+  f="$1"; [ -f "$f" ] || return 0
+  awk '
+    /<!-- llm-wiki-kit:begin -->/ {skip=1; next}                 # old form: begin
+    skip && /<!-- llm-wiki-kit:end -->/ {skip=0; next}           # old form: end
+    /^## Knowledge wiki \(llm-wiki-kit\)/ {skip2=1}              # new form: heading
+    skip2 && /<!-- \/llm-wiki-kit -->/ {skip2=0; next}           # new form: trailing
+    skip || skip2 {next}
+    {a[++n]=$0} NF{last=n}                                       # buffer kept lines; track last non-blank
+    END {for (i=1;i<=last;i++) print a[i]}                       # drop trailing blank lines
+  ' "$f" > "$f.lwk.tmp" && mv "$f.lwk.tmp" "$f"
+}
 
 install_for_agent() {
-  agent="$1"
-  root="$(agent_root "$agent")"; cmddir="$(agent_cmddir "$agent")"
-  ext="$(agent_ext "$agent")";   mem="$(agent_mem "$agent")"
+  agent="$1"; ext="$(agent_ext "$agent")"
 
-  # 1. render + install commands
-  outdir="$root/$cmddir"
-  mkdir -p "$outdir"
-  # for the local install we always bake the absolute path (works even on
-  # agents without shell injection).
-  for src in "$KIT_DIR"/commands-src/*.md; do
-    name="$(basename "${src%.md}")"
-    bash "$RENDER" "$agent" "$WIKI_DIR" "$src" > "$outdir/$name.$ext"
-  done
-  echo "    [$agent] commands -> $outdir/*.$ext"
+  # 1. render + install commands into every target dir (bake the absolute path,
+  #    so it works even on agents without shell injection).
+  while IFS= read -r outdir; do
+    [ -n "$outdir" ] || continue
+    mkdir -p "$outdir"
+    for src in "$KIT_DIR"/commands-src/*.md; do
+      name="$(basename "${src%.md}")"
+      bash "$RENDER" "$agent" "$WIKI_DIR" "$src" > "$outdir/$name.$ext"
+    done
+    echo "    [$agent] commands -> $outdir/*.$ext"
+  done <<EOF
+$(agent_cmd_targets "$agent")
+EOF
 
   # 2. install the instruction snippet into the agent's memory file
-  memfile="$root/$mem"
+  memfile="$(agent_mem_file "$agent")"
+  [ -n "$memfile" ] || { echo "    [$agent] (no global instruction file)"; return; }
   mkdir -p "$(dirname "$memfile")"
   if [ "$agent" = "cursor" ]; then
     # Cursor rules are .mdc with their own frontmatter. We own this file.
@@ -143,12 +186,13 @@ install_for_agent() {
     echo "    [$agent] rule    -> $memfile (note: Cursor rules are project-scoped)"
   else
     touch "$memfile"
-    if grep -qF "$MARKER_BEGIN" "$memfile" 2>/dev/null; then
-      echo "    [$agent] memory  -> $memfile (already present)"
-    else
-      { echo ""; echo "$MARKER_BEGIN"; printf '%s\n' "$SNIPPET_BAKED"; echo "$MARKER_END"; } >> "$memfile"
-      echo "    [$agent] memory  -> $memfile (appended)"
-    fi
+    had=0; grep -qF "$MEM_END" "$memfile" 2>/dev/null && had=1
+    grep -qF "<!-- llm-wiki-kit:begin -->" "$memfile" 2>/dev/null && had=1
+    strip_managed "$memfile"   # remove old/previous block (self-updating)
+    [ -s "$memfile" ] && echo "" >> "$memfile"   # blank separator only if file has content
+    { printf '%s\n' "$SNIPPET_BAKED"; printf '%s\n' "$MEM_END"; } >> "$memfile"
+    [ "$had" -eq 1 ] && echo "    [$agent] memory  -> $memfile (updated)" \
+                      || echo "    [$agent] memory  -> $memfile (added)"
   fi
 }
 
