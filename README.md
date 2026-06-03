@@ -113,7 +113,7 @@ wiki/<topic>/   generic, reusable knowledge
 wiki/<org>/     org/project-specific knowledge (links to topic pages)
 outputs/    synthesized reports
 index.md    catalog · log.md  append-only journal
-AGENTS.md   the canonical schema (CLAUDE.md / GEMINI.md are thin pointers to it)
+AGENTS.md   the canonical schema/operating manual (single file, all agents)
 ```
 
 Based on Andrej Karpathy's "LLM Wiki" idea.

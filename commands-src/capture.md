@@ -10,16 +10,23 @@ directly; no transcript file needed.
 
 Focus (optional): {{ARGS}}
 
+Wiki conventions (consult `{{WIKI}}/AGENTS.md` only if you hit an edge case):
+- One concept per page, `kebab-case.md`. Generic/reusable knowledge →
+  `{{WIKI}}/wiki/<topic>/` (new topic folder if needed); org/project-specific →
+  that org's folder, **linking** to the generic topic page rather than duplicating.
+- Page = frontmatter (`title, created, updated, sources, tags`) + `## What it is`
+  + `## Details` + `## See also` (bidirectional relative links). Dates absolute
+  (`YYYY-MM-DD`). Prefer verifiable specifics. `{{WIKI}}/raw/` is read-only.
+
 Steps:
-1. Read `{{WIKI}}/AGENTS.md` for the schema and conventions.
+1. Skim `{{WIKI}}/index.md` (the page catalog) to see existing topics/pages, so
+   you place new knowledge correctly and avoid duplicates. Open a specific page
+   only if you're updating it.
 2. Scan this conversation for **durable, reusable** findings: non-obvious fixes,
    diagnostic procedures, infra facts, hard-won gotchas, decisions with rationale.
    **Skip** transient context, anything already in a repo's code/git history, and
    trivia. Curate aggressively — a few good pages beat a dump.
-3. Ingest per the wiki's rules: generic knowledge → `{{WIKI}}/wiki/<topic>/` (new
-   topic folder if needed); company/project-specific → the org folder, **linking**
-   to the generic topic page instead of duplicating. Create/update pages
-   (frontmatter + summary + details + See also), fixing backlinks both directions.
+3. Create/update pages per the conventions above, fixing backlinks both directions.
 4. Update `{{WIKI}}/index.md` and append an `INGEST:` line to `{{WIKI}}/log.md`.
 5. Show a concise summary (page paths + one line each), then commit in `{{WIKI}}`.
    Do not push unless asked.

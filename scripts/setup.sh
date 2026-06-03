@@ -210,9 +210,9 @@ echo "==> wrote $CONFIG_DIR/knowledge-wiki.path"
 
 # --- bootstrap the shared wiki (only fills missing skeleton files) -------
 mkdir -p "$WIKI_DIR/raw" "$WIKI_DIR/outputs" "$WIKI_DIR/wiki"
+# single canonical schema doc (AGENTS.md) — no per-agent duplicate pointers, so
+# an agent landing in the wiki doesn't read three copies of the same schema.
 [ -f "$WIKI_DIR/AGENTS.md" ] || cp "$KIT_DIR/templates/wiki/AGENTS.md" "$WIKI_DIR/AGENTS.md"
-[ -f "$WIKI_DIR/CLAUDE.md" ] || cp "$KIT_DIR/templates/wiki/CLAUDE.md" "$WIKI_DIR/CLAUDE.md"
-[ -f "$WIKI_DIR/GEMINI.md" ] || cp "$KIT_DIR/templates/wiki/GEMINI.md" "$WIKI_DIR/GEMINI.md"
 [ -f "$WIKI_DIR/index.md" ]  || cp "$KIT_DIR/templates/wiki/index.md"  "$WIKI_DIR/index.md"
 [ -f "$WIKI_DIR/log.md" ]    || cp "$KIT_DIR/templates/wiki/log.md"    "$WIKI_DIR/log.md"
 [ -f "$WIKI_DIR/.gitignore" ]|| cp "$KIT_DIR/templates/wiki/gitignore" "$WIKI_DIR/.gitignore"
