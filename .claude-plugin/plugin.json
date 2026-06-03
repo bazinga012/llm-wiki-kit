@@ -1,0 +1,8 @@
+{
+  "name": "llm-wiki-kit",
+  "version": "0.1.0",
+  "description": "Karpathy-style LLM knowledge wiki: slash commands for ingest/query/lint over a configurable markdown wiki.",
+  "author": { "name": "Vishal Agrawal", "email": "vishal@jisr.net" },
+  "license": "MIT",
+  "keywords": ["knowledge-base", "wiki", "llm-wiki", "karpathy", "notes", "second-brain"]
+}

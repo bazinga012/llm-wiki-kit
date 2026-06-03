@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "llm-wiki-kit",
+  "version": "0.1.0",
+  "description": "LLM knowledge-wiki commands (Karpathy pattern)",
+  "plugins": [
+    {
+      "name": "llm-wiki-kit",
+      "description": "Ingest/query/lint slash commands for a configurable Karpathy-style LLM wiki",
+      "source": ".",
+      "category": "knowledge"
+    }
+  ]
+}

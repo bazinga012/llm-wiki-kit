@@ -1,0 +1,5 @@
+# Large/binary raw sources — keep the .md compiled knowledge, not the blobs
+raw/**/*.pdf
+raw/**/*.zip
+raw/**/*.mp4
+.DS_Store
