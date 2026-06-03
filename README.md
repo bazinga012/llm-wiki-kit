@@ -54,6 +54,27 @@ a repo's `.agent/workflows/` & `.agent/rules/`.
 ⁴ Antigravity surfaces `~/.gemini/GEMINI.md` as a global Rule, so the kit's
 instruction snippet installs there (shared with Gemini CLI).
 
+## Claude Desktop & other MCP clients (`mcp/`)
+Claude Desktop has no file-based commands and is sandboxed, so it's wired up via
+a **standalone, agent-agnostic MCP server** in `mcp/`. It exposes the same four
+commands as MCP **prompts** (shown in the client's `/` menu) plus **tools**
+scoped to the wiki dir (`read_page`, `write_page`, `list_pages`, `search_wiki`,
+`append_log`, `git_commit`, `wiki_info`) so a sandboxed client can maintain the
+wiki on its own. Nothing in it is Claude-specific — any MCP client can use it.
+
+```bash
+scripts/register-mcp.py claude-desktop                 # default
+scripts/register-mcp.py all                            # every supported client
+scripts/register-mcp.py cursor gemini antigravity opencode codex
+```
+The registrar merges a `wiki` server entry into each client's config in the
+right shape (`mcpServers` JSON for Claude Desktop/Cursor/Gemini/Antigravity, the
+`mcp` block for opencode, `[mcp_servers.wiki]` TOML for Codex), idempotently and
+with a `.bak`. Restart the client afterwards. See `mcp/README.md` for details.
+
+> The CLI/IDE agents above already get **native** commands via `setup.sh`; the
+> MCP server is mainly for Claude Desktop, but works as an alternative anywhere.
+
 ## Configurable wiki path
 The shared wiki directory is resolved (by `setup.sh` and by the Claude plugin's
 runtime resolver) in this order:
